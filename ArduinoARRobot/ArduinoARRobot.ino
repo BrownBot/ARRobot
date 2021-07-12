@@ -6,10 +6,10 @@
 
 #include "credentials.h"
 
-#define SERVOMIN 180  //
-#define SERVOMAX 420  //
-#define SLOW 50       //
-#define FAST 10       //
+#define SERVOMIN 110  //
+#define SERVOMAX 530  //
+#define SLOW 500       //
+#define FAST 100       //
 #define SERVO_FREQ 50 // Analog servos run at ~50 Hz updates
 
 const char *ssid = networkSSID;
@@ -18,13 +18,23 @@ const char *mqttServer = mqttSERVER;
 const char *mqttUsername = mqttUSERNAME;
 const char *mqttPassword = mqttPASSWORD;
 
+unsigned long previousMillis = 0; 
+
 String hostName = "brownbot.dyndns.org";
 int pingResult;
 
 char subTopic[] = "robot0";  //payload[0] will control/set LED
 char pubTopic[] = "tempcur"; //payload[0] will have ledState value
 
-char activeCommand;
+char activeCommand = 'H';
+char readCommand = 'H';
+int phase = 0;
+
+int legTargets[4][3];
+int legCurrent[4][3];
+int legDeltas[4][3]; 
+
+bool legDir[4] = { 1, 0, 1, 0 };
 
 WiFiClient wifiClient;
 PubSubClient client(wifiClient);
@@ -87,7 +97,7 @@ void callback(char *topic, byte *payload, unsigned int length)
   }
   Serial.println();
 
-  activeCommand = (char)payload[0];
+  readCommand = (char)payload[0];
   //   // Switch on the LED if 1 was received as first character
   //   if ((char)payload[0] == 'T')
   //   {
@@ -134,25 +144,102 @@ void servocontrol(int n, int a) // n= servo number a= angle
   pwm.setPWM(n, 0, a);
 }
 
-void moveleg(int n, int an, int f, int t, int w)
+void updateLeg(int leg)
 {
-  yield();
+    for(int j = 0; j < 3; j++)
+    {
+      int n = leg * 3 + j;
+      
+      // if we've hit out target just set the servo to the value
+      if(legDeltas[leg][j] == 0 || legCurrent[leg][j] == legTargets[leg][j])
+      {
+        pwm.setPWM(n, 0, legTargets[leg][j]);
+      }
+      else
+      {
+        //check for limit hits
+        legCurrent[leg][j] += legDeltas[leg][j];
+        if(legDeltas[leg][j] > 0)
+        {
+          if(legCurrent[leg][j] >= legTargets[leg][j])
+          {
+            legDeltas[leg][j] = 0;
+            pwm.setPWM(n, 0, legTargets[leg][j]);
+          }
+          else
+          {
+            pwm.setPWM(n, 0, legCurrent[leg][j]);
+          }
+        }
+        else
+        {
+          if(legCurrent[leg][j] <= legTargets[leg][j])
+          {
+            legDeltas[leg][j] = 0;
+            pwm.setPWM(n, 0, legTargets[leg][j]);
+          }
+          else
+          {
+            pwm.setPWM(n, 0, legCurrent[leg][j]);
+          }
+        }
+      }
+    }
+}
+
+int mapAngle(int a, bool reverse)
+{
+  if(reverse)
+  {
+    return map(180 - a, 0, 180, SERVOMIN, SERVOMAX);
+  }
+  return map(a, 0, 180, SERVOMIN, SERVOMAX);
+}
+
+int calcDelta(int curr, int target)
+{
+  if(curr == target) return 0;
+  int d = target - curr;
+  //int s = d / 10;
+  if(d > 0)
+  {
+    return 1;
+  }
+  else
+  {
+    return -1;
+  }
+}
+
+void moveleg(int n, int an, int f, int t)
+{
+  int leg = n - 1;
+  bool dir = legDir[leg];
+
   if (t >= 0)
   {
-    servocontrol(3 * (n - 1) + 2, t);
+    legTargets[leg][2] = mapAngle(t, dir);
+    legDeltas[leg][2] = calcDelta(legCurrent[leg][2], legTargets[leg][2]);
+    //servocontrol(3 * (n - 1) + 2, t);
   };
-  delay(w);
+  
   if (f >= 0)
   {
-    servocontrol(3 * (n - 1) + 1, f);
+    legTargets[leg][1] = mapAngle(f, dir);
+    legDeltas[leg][1] = calcDelta(legCurrent[leg][1], legTargets[leg][1]);
+    //servocontrol(3 * (n - 1) + 1, f);
   };
-  delay(w);
+
   if (an >= 0)
   {
-    servocontrol(3 * (n - 1), an);
+    legTargets[leg][0] = mapAngle(an, dir);
+    legDeltas[leg][0] = calcDelta(legCurrent[leg][0], legTargets[leg][0]);
+    //servocontrol(3 * (n - 1), an);
   };
-  delay(w);
+
 }
+
+
 
 void stp(int n, int a, int w)
 {
@@ -171,97 +258,130 @@ void stp(int n, int a, int w)
 
 void mov(int n, int a, int w)
 {
-  moveleg(n, a, -1, -1, w);
+  moveleg(n, a, -1, -1);
+}
+
+void printLegs()
+{
+  for(int i = 0; i < 4; i++)
+  {
+    Serial.print("Leg: ");
+    Serial.print("(");
+    Serial.print(legCurrent[i][0]);
+    Serial.print(",");
+    Serial.print(legTargets[i][0]);
+    Serial.print(",");
+    Serial.print(legDeltas[i][0]);
+    Serial.print(")");
+  }
+  Serial.println("");
+  
 }
 
 void iniz()
 {
-  moveleg(1, 90, 90, 90, FAST);
-  moveleg(2, 90, 90, 90, FAST);
-  moveleg(3, 90, 90, 90, FAST);
-  moveleg(4, 90, 90, 90, FAST);
+  for(int i = 0; i < 4; i++)
+  {
+    for(int j = 0; j < 3; j++)
+    {
+      legCurrent[i][j] = mapAngle(90,legDir[i]);
+      pwm.setPWM(i * 3 + j, 0, 300);
+    }
+  }
+  moveleg(1, 90, 90, 90);
+  moveleg(2, 90, 90, 90);
+  moveleg(3, 90, 90, 90);
+  moveleg(4, 90, 90, 90);
+}
+
+void rest()
+{
+  moveleg(1, 50, 90, 90);
+  moveleg(2, 50, 90, 90);
+  moveleg(3, 50, 90, 90);
+  moveleg(4, 50, 90, 90);
 }
 
 void stand()
 {
-  moveleg(1, -1, 50, 80, FAST);
-  moveleg(2, -1, 50, 80, FAST);
-  moveleg(3, -1, 50, 80, FAST);
-  moveleg(4, -1, 35, 80, FAST);
+  moveleg(1, 50, 50, 50);
+  moveleg(2, 50, 50, 50);
+  moveleg(3, 50, 50, 50);
+  moveleg(4, 50, 50, 50);
 }
 
 void squat()
 {
-  moveleg(1, -1, 130, 100, FAST);
-  moveleg(2, -1, 130, 100, FAST);
-  moveleg(3, -1, 130, 100, FAST);
-  moveleg(4, -1, 130, 100, FAST);
+  moveleg(1, -1, 130, 100);
+  moveleg(2, -1, 130, 100);
+  moveleg(3, -1, 130, 100);
+  moveleg(4, -1, 130, 100);
 }
 
 void wave_r()
 {
   for (int j = 0; j < 3; j++)
   {
-    moveleg(4, -1, 160, 0, SLOW);
+    moveleg(4, -1, 160, 0);
     for (int i = 30; i <= 110; i++)
     {
-      moveleg(4, i, -1, -1, FAST);
+      moveleg(4, i, -1, -1);
     }
     for (int i = 110; i >= 20; i--)
     {
-      moveleg(4, i, -1, -1, FAST);
+      moveleg(4, i, -1, -1);
     }
   }
-  moveleg(4, 90, 90, 90, SLOW);
+  moveleg(4, 90, 90, 90);
 }
 
 void wave_l()
 {
   for (int j = 0; j < 3; j++)
   {
-    moveleg(1, -1, 160, 0, SLOW);
+    moveleg(1, -1, 160, 0);
     for (int i = 30; i <= 110; i++)
     {
-      moveleg(1, i, -1, -1, FAST);
+      moveleg(1, i, -1, -1);
     }
     for (int i = 110; i >= 20; i--)
     {
-      moveleg(1, i, -1, -1, FAST);
+      moveleg(1, i, -1, -1);
     }
   }
-  moveleg(1, 90, 90, 90, SLOW);
+  moveleg(1, 90, 90, 90);
 }
 
 void skew_r()
 {
-  moveleg(1, 20, -1, -1, FAST);
-  moveleg(2, 20, -1, -1, FAST);
-  moveleg(3, 20, -1, -1, FAST);
-  moveleg(4, 160, -1, -1, FAST);
+  moveleg(1, 20, -1, -1);
+  moveleg(2, 20, -1, -1);
+  moveleg(3, 20, -1, -1);
+  moveleg(4, 160, -1, -1);
 }
 
 void skew_l()
 {
-  moveleg(1, 160, -1, -1, FAST);
-  moveleg(2, 160, -1, -1, FAST);
-  moveleg(3, 160, -1, -1, FAST);
-  moveleg(4, 20, -1, -1, FAST);
+  moveleg(1, 160, -1, -1);
+  moveleg(2, 160, -1, -1);
+  moveleg(3, 160, -1, -1);
+  moveleg(4, 20, -1, -1);
 }
 
 void courtsy()
 {
-  moveleg(1, -1, 140, 80, FAST);
-  moveleg(2, -1, -1, 80, FAST);
-  moveleg(3, -1, 40, 80, FAST);
-  moveleg(4, -1, 40, 80, FAST);
+  moveleg(1, -1, 140, 80);
+  moveleg(2, -1, -1, 80);
+  moveleg(3, -1, 40, 80);
+  moveleg(4, -1, 40, 80);
 }
 
 void prepare_jump()
 {
-  moveleg(1, -1, 40, 80, FAST);
-  moveleg(2, -1, -1, 80, FAST);
-  moveleg(3, -1, 140, 80, FAST);
-  moveleg(4, -1, 140, 80, FAST);
+  moveleg(1, -1, 40, 80);
+  moveleg(2, -1, -1, 80);
+  moveleg(3, -1, 140, 80);
+  moveleg(4, -1, 140, 80);
 }
 
 void rotate_r()
@@ -272,7 +392,6 @@ void rotate_r()
     dat = activeCommand;
     stp(1, 160, SLOW);
     stp(3, 160, SLOW);
-    //  stp(5,20, SLOW);
     stp(2, 160, SLOW);
     stp(4, 20, SLOW);
     //  stp(6,20, SLOW);
@@ -286,53 +405,119 @@ void rotate_r()
   }
 }
 
-void rotate_l()
+void rotate_l(int phase)
 {
-  char dat = 'X';
-  while (dat != 'E')
+  int pha = phase % 8;
+  switch (pha)
   {
-    dat = activeCommand;
-    stp(1, 20, SLOW);
-    stp(3, 20, SLOW);
-    //  stp(5,160, SLOW);
-    stp(2, 20, SLOW);
-    stp(4, 160, SLOW);
-    //  stp(6,160, SLOW);
-    delay(50);
-    mov(1, 90, FAST);
-    mov(2, 90, FAST);
-    mov(3, 90, FAST);
-    mov(4, 90, FAST);
-    //    mov(5,90, FAST);
-    //    mov(6,90, FAST);
+    case 0:
+    {
+      moveleg(1, 50, -1, -1);
+      moveleg(2, 50, -1, -1);
+      moveleg(3, 50, -1, -1);
+      moveleg(4, 50, -1, -1);
+      break;
+    }
+    case 1:
+    {
+      moveleg(1, 30, -1, -1);
+      moveleg(2, 70, -1, -1);
+      moveleg(3, 30, -1, -1);
+      moveleg(4, 70, -1, -1);
+      break;
+    }
+    case 2:
+    {
+      moveleg(1, 10, 140, 140);
+      moveleg(2, 90, 100, 100);
+      moveleg(3, 10, 140, 140);
+      moveleg(4, 90, 100, 100);
+      break;
+    }
+    case 3:
+    {
+      moveleg(1, 30, -1, -1);
+      moveleg(2, 70, -1, -1);
+      moveleg(3, 30, -1, -1);
+      moveleg(4, 70, -1, -1);
+      break;
+    }
+    case 4:
+    {
+      moveleg(1, 50, -1, -1);
+      moveleg(2, 50, -1, -1);
+      moveleg(3, 50, -1, -1);
+      moveleg(4, 50, -1, -1);
+      break;
+    }
+    case 5:
+    {
+      moveleg(1, 70, -1, -1);
+      moveleg(2, 30, -1, -1);
+      moveleg(3, 70, -1, -1);
+      moveleg(4, 30, -1, -1);
+      break;
+    }
+    case 6:
+    {
+      moveleg(1, 90, 120, 120);
+      moveleg(2, 10, 120, 120);
+      moveleg(3, 90, 120, 120);
+      moveleg(4, 10, 120, 120);
+      break;
+    }
+    case 7:
+    {
+      moveleg(1, 70, -1, -1);
+      moveleg(2, 30, -1, -1);
+      moveleg(3, 70, -1, -1);
+      moveleg(4, 30, -1, -1);
+      break;
+    }
   }
 }
 
-void forward()
+void forward(int phase)
 {
-  yield();
-  char dat = 'X';
-  while (dat != 'E')
+  int pha = phase % 4;
+  switch (pha)
   {
-    dat = activeCommand;
-    //  mov(6,40, FAST);
-    mov(1, 40, FAST);
-    mov(2, 40, FAST);
-    //  mov(5,40, FAST);
-    mov(4, 40, FAST);
-    mov(3, 40, FAST);
-    stp(1, 140, SLOW);
-    //  stp(6,140, SLOW);
-    //  stp(5,140, SLOW);
-    stp(2, 140, SLOW);
-    stp(3, 140, SLOW);
-    stp(4, 140, SLOW);
+    case 0:
+    {
+      moveleg(1, 50, 90, 90);
+      moveleg(2, 50, 90, 90);
+      moveleg(3, 50, 90, 90);
+      moveleg(4, 50, 90, 90);
+      break;
+    }
+    case 1:
+    {
+      moveleg(1, 50, 90, 90);
+      moveleg(2, 50, 90, 90);
+      moveleg(3, 50, 90, 90);
+      moveleg(4, 50, 120, 90);
+      break;
+    }
+    case 2:
+    {
+      moveleg(1, 50, 90, 90);
+      moveleg(2, 50, 90, 90);
+      moveleg(3, 50, 90, 90);
+      moveleg(4, 30, 120, 90);
+      break;
+    }
+    case 3:
+    {
+      moveleg(1, 50, 90, 90);
+      moveleg(2, 50, 90, 90);
+      moveleg(3, 50, 90, 90);
+      moveleg(4, 30, 90, 90);
+      break;
+    }
   }
-  delay(SLOW);
-  iniz();
 }
 
-void backward()
+void backward(int phase)
 {
   yield();
   char dat = 'X';
@@ -369,9 +554,16 @@ void setup()
   client.setServer(mqttServer, 1883);
   client.setCallback(callback);
 
-  //iniz();
-//  stand();
+  
   iniz();
+  printLegs();
+  delay(1000);
+  //stand();
+  printLegs();
+
+  
+//  delay(1000);
+//  iniz();
 
 //  pwm.setPWM(0, 0, 3000);
 //  pwm.setPWM(0  , 0, 1000);
@@ -384,80 +576,91 @@ void loop()
   {
     reconnect();
   }
-  
-  char olddato;
-  //   while (bluetooth.available())
-  //   {
-  char dato = activeCommand; //bluetooth.read(); // read Bluetooth character
 
-  switch (dato)
+  updateLeg(0);
+  updateLeg(1);
+  updateLeg(2);
+  updateLeg(3);
+
+  // non blocking timer
+  unsigned long currentMillis = millis();
+
+  if (currentMillis - previousMillis >= 1000) 
   {
-    case 'A':
+    
+    if(activeCommand != readCommand)
     {
-      if (olddato == 'E')
-        stand();
-      else
-        forward();
-      olddato = dato;
-      break;
+      activeCommand = readCommand;
+      phase = 0;
     }
-    case 'B':
+    
+    // save the last time
+    previousMillis = currentMillis;
+
+    switch (activeCommand)
     {
-      if (olddato == 'E')
-        squat();
-      else
-        backward();
-      olddato = dato;
-      break;
-    }
-    case 'C':
-    {
-      if (olddato == 'E')
-        courtsy();
-      else
-        skew_r();
-      olddato = dato;
-      break;
-    }
-    case 'D':
-    {
-      if (olddato == 'E')
-        prepare_jump();
-      else
-        skew_l();
-      olddato = dato;
-      break;
-    }
-    case 'G':
-    {
-      if (olddato == 'E')
-        wave_l();
-      else
-        rotate_l();
-      olddato = dato;
-      break;
-    }
-    case 'F': //
-    {
-      if (olddato == 'E')
-        wave_r();
-      else
-        rotate_r();
-      olddato = dato;
-      break;
-    }
-    case 'E':
-    {
-      if (olddato == 'E')
+      case 'S':
       {
-        iniz();
-        olddato = '#';
+        //stand();
+        rest();
+        break;
       }
-      else
-        olddato = dato;
-      break;
+      case 'H':
+      {
+        rest();
+        break;
+      }
+      case 'Q':
+      {
+        squat();
+        break;
+      }
+      case 'F':
+      {
+        rotate_l(phase);
+        //forward(phase);
+        break;
+      }
+      case 'B':
+      {
+        backward(phase);
+        break;
+      }
+      case 'C':
+      {
+        courtsy();
+        break;
+      }
+      case 'J':
+      {
+        prepare_jump();
+        break;
+      }
+      case '>':
+      {
+        skew_r();
+        break;
+      }
+      case '<':
+      {
+        skew_l();
+        break;
+      }
+      case 'L':
+      {
+        rotate_l(phase);
+        break;
+      }
+      case 'R': //
+      {
+        rotate_r();
+        break;
+      }
     }
+    phase++;
+    printLegs();
   }
+  
   
   client.loop();
   //     }

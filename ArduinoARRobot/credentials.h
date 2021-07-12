@@ -1,8 +1,8 @@
-char networkSSID[] = "######";
-char networkPASSWORD[] = "######";
+char networkSSID[] = "LeahyNet";
+char networkPASSWORD[] = "brownbot1a";
 
-IPAddress dns(192, 168, 1, 100);
+IPAddress dns(192, 168, 1, 120);
 
 char mqttSERVER[] = "192.168.1.200";
-char mqttUSERNAME[] = "########";
-char mqttPASSWORD[] = "#########";
+char mqttUSERNAME[] = "bob";
+char mqttPASSWORD[] = "log";
