@@ -1,0 +1,45 @@
+﻿<Properties StartupConfiguration="{8B7F1A3C-D36A-4B71-A885-868A2F009767}|Default">
+  <MonoDevelop.Ide.Workbench ActiveDocument="MQTTDebugger/Pages/Index.razor.cs">
+    <Files>
+      <File FileName="MQTTDebugger/Pages/index.razor.cs" Line="27" Column="31" />
+      <File FileName="MQTTDebugger/Program.cs" Line="27" Column="1" />
+      <File FileName="MqttApi/Controllers/WeatherForecastController.cs" Line="1" Column="1" />
+      <File FileName="MqttApi/Startup.cs" Line="1" Column="1" />
+      <File FileName="MqttApi/Program.cs" Line="1" Column="1" />
+      <File FileName="MqttApi/Controllers/RobotController.cs" Line="1" Column="1" />
+      <File FileName="MqttShared/Class1.cs" Line="1" Column="1" />
+      <File FileName="MqttShared/Models/LegsPayload.cs" Line="14" Column="1" />
+      <File FileName="MQTTDebugger/Pages/Index.razor" Line="56" Column="7" NotebookId="1" />
+    </Files>
+    <Pads>
+      <Pad Id="ProjectPad">
+        <State name="__root__">
+          <Node name="ARRobot" expanded="True">
+            <Node name="MqttApi" expanded="True">
+              <Node name="Dependencies" expanded="True" />
+              <Node name="Controllers" expanded="True" />
+            </Node>
+            <Node name="MqttDebugger" expanded="True">
+              <Node name="Dependencies" expanded="True" />
+              <Node name="Pages" expanded="True">
+                <Node name="Index.razor" expanded="True">
+                  <Node name="Index.razor.cs" selected="True" />
+                </Node>
+              </Node>
+            </Node>
+            <Node name="MqttShared" expanded="True">
+              <Node name="Models" expanded="True" />
+            </Node>
+          </Node>
+        </State>
+      </Pad>
+    </Pads>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.ItemProperties.MqttDebugger PreferredExecutionTarget="/Applications/Google Chrome.app" />
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MultiItemStartupConfigurations />
+</Properties>

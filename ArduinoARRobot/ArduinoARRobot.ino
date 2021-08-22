@@ -98,6 +98,15 @@ void callback(char *topic, byte *payload, unsigned int length)
   Serial.println();
 
   readCommand = (char)payload[0];
+
+  if(readCommand == 'X')
+  {
+    for(i = 0; i < 4; i++)
+    {
+      int offset = 1 + i * 3;
+      moveleg(i+1, (int)payload[offset], (int)payload[offset + 1], (int)payload[offset + 2]);
+    }
+  }
   //   // Switch on the LED if 1 was received as first character
   //   if ((char)payload[0] == 'T')
   //   {
@@ -296,10 +305,10 @@ void iniz()
 
 void rest()
 {
-  moveleg(1, 50, 90, 90);
-  moveleg(2, 50, 90, 90);
-  moveleg(3, 50, 90, 90);
-  moveleg(4, 50, 90, 90);
+  moveleg(1, 50, 170, 150);
+  moveleg(2, 50, 170, 150);
+  moveleg(3, 50, 170, 150);
+  moveleg(4, 50, 180, 120);
 }
 
 void stand()

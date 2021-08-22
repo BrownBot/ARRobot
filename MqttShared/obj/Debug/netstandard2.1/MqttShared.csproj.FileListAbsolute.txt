@@ -1,0 +1,10 @@
+/Users/peterleahy/Dev/ARRobot/MqttShared/bin/Debug/netstandard2.1/MqttShared.deps.json
+/Users/peterleahy/Dev/ARRobot/MqttShared/bin/Debug/netstandard2.1/MqttShared.dll
+/Users/peterleahy/Dev/ARRobot/MqttShared/bin/Debug/netstandard2.1/MqttShared.pdb
+/Users/peterleahy/Dev/ARRobot/MqttShared/obj/Debug/netstandard2.1/MqttShared.csproj.AssemblyReference.cache
+/Users/peterleahy/Dev/ARRobot/MqttShared/obj/Debug/netstandard2.1/MqttShared.GeneratedMSBuildEditorConfig.editorconfig
+/Users/peterleahy/Dev/ARRobot/MqttShared/obj/Debug/netstandard2.1/MqttShared.AssemblyInfoInputs.cache
+/Users/peterleahy/Dev/ARRobot/MqttShared/obj/Debug/netstandard2.1/MqttShared.AssemblyInfo.cs
+/Users/peterleahy/Dev/ARRobot/MqttShared/obj/Debug/netstandard2.1/MqttShared.csproj.CoreCompileInputs.cache
+/Users/peterleahy/Dev/ARRobot/MqttShared/obj/Debug/netstandard2.1/MqttShared.dll
+/Users/peterleahy/Dev/ARRobot/MqttShared/obj/Debug/netstandard2.1/MqttShared.pdb

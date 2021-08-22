@@ -1,0 +1,56 @@
+﻿@page "/"
+
+<h1>Hello, world!</h1>
+
+Welcome to your new app.
+
+
+<div class="row">
+    <div class="col">
+        <input type="number" @bind-value="@Legs[0]" />
+    </div>
+    <div class="col">
+        <input type="number" @bind-value="@Legs[1]" />
+    </div>
+    <div class="col">
+        <input type="number" @bind-value="@Legs[2]" />
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        <input type="number" @bind-value="@Legs[3]" />
+    </div>
+    <div class="col">
+        <input type="number" @bind-value="@Legs[4]" />
+    </div>
+    <div class="col">
+        <input type="number" @bind-value="@Legs[5]" />
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        <input type="number" @bind-value="@Legs[6]" />
+    </div>
+    <div class="col">
+        <input type="number" @bind-value="@Legs[7]" />
+    </div>
+    <div class="col">
+        <input type="number" @bind-value="@Legs[8]" />
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        <input type="number" @bind-value="@Legs[9]" />
+    </div>
+    <div class="col">
+        <input type="number" @bind-value="@Legs[10]" />
+    </div>
+    <div class="col">
+        <input type="number" @bind-value="@Legs[11]" />
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        <button class="btn btn-primary" @onclick="OnSentClick" >Send</button>
+    </div>
+</div>
